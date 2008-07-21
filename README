@@ -3,6 +3,8 @@ attachment-fu
 
 attachment_fu is a plugin by Rick Olson (aka technoweenie <http://techno-weenie.net>) and is the successor to acts_as_attachment.  To get a basic run-through of its capabilities, check out Mike Clark's tutorial <http://clarkware.com/cgi/blosxom/2007/02/24#FileUploadFu>.
 
+** this fork has been modified to handle NGINX's upload_file module (see http://www.grid.net.ru/nginx/upload.en.html) as a front -- in this case, the UploadedStringIO field is replaced 
+  with a string indicating the temporary file location, the content_type, and the original file name. It's very useful for long file uploads to have NGINX handle this. **
 
 attachment_fu functionality
 ===========================
