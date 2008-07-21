@@ -57,6 +57,14 @@ module Technoweenie # :nodoc:
           copy_to_temp_file full_filename
         end
 
+        # if size is null or zero, but file is around, find out what file size is... and set it.
+        def correct_attachment_size
+           return unless size.nil? || size==0
+           write_attribute :size, File.size?(full_filename)
+           true
+        end
+
+
         protected
           # Destroys the file.  Called in the after_destroy callback
           def destroy_file
