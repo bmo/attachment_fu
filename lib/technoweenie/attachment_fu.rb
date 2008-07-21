@@ -290,22 +290,32 @@ module Technoweenie # :nodoc:
       #
       # TODO: Allow it to work with Merb tempfiles too.
       def uploaded_data=(file_data)
-        if file_data.respond_to?(:content_type)
-          return nil if file_data.size == 0
-          self.content_type = file_data.content_type
-          self.filename     = file_data.original_filename if respond_to?(:filename)
+        # see if we have NGINX string... see http://www.grid.net.ru/nginx/upload.en.html
+        if file_data.is_a?(String)
+          (s_filename, s_content_type, s_orig_filename) = file_data.split(' ', 3);
+          return nil if  (s_orig_filename.nil? || s_filename.nil? || s_content_type.nil?)
+          self.content_type = s_content_type
+          self.filename = s_orig_filename if respond_to?(:filename)
+          self.temp_path = s_filename
+          logger.debug("uploaded_data - temp path is #{self.temp_path} self is #{self.inspect}")
         else
-          return nil if file_data.blank? || file_data['size'] == 0
-          self.content_type = file_data['content_type']
-          self.filename =  file_data['filename']
-          file_data = file_data['tempfile']
-        end
-        if file_data.is_a?(StringIO)
-          file_data.rewind
-          self.temp_data = file_data.read
-        else
-          self.temp_path = file_data
-        end
+          if file_data.respond_to?(:content_type)
+            return nil if file_data.size == 0
+            self.content_type = file_data.content_type
+            self.filename     = file_data.original_filename if respond_to?(:filename)
+          else
+            return nil if file_data.blank? || file_data['size'] == 0
+            self.content_type = file_data['content_type']
+            self.filename =  file_data['filename']
+            file_data = file_data['tempfile']
+          end
+          if file_data.is_a?(StringIO)
+            file_data.rewind
+            self.temp_data = file_data.read
+          else
+            self.temp_path = file_data
+          end
+	end
       end
 
       # Gets the latest temp path from the collection of temp paths.  While working with an attachment,
