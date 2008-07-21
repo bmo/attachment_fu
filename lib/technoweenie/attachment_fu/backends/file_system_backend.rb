@@ -60,6 +60,7 @@ module Technoweenie # :nodoc:
         # if size is null or zero, but file is around, find out what file size is... and set it.
         def correct_attachment_size
            return unless size.nil? || size==0
+           return if filename.nil?
            write_attribute :size, File.size?(full_filename)
            true
         end
@@ -86,14 +87,19 @@ module Technoweenie # :nodoc:
             end
             @old_filename =  nil
             true
-          end
+            end
           
           # Saves the file to the file system
           def save_to_storage
             if save_attachment?
               # TODO: This overwrites the file if it exists, maybe have an allow_overwrite option?
               FileUtils.mkdir_p(File.dirname(full_filename))
-              File.cp(temp_path, full_filename)
+              # Moving the file may be much, much faster if on the same filesystem
+              if self.attachment_options[:move_on_save]
+                  FileUtils.mv(temp_path, full_filename)
+              else
+                  File.cp(temp_path, full_filename)
+              end
               File.chmod(attachment_options[:chmod] || 0644, full_filename)
             end
             @old_filename = nil

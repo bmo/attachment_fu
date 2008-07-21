@@ -291,15 +291,13 @@ module Technoweenie # :nodoc:
       # TODO: Allow it to work with Merb tempfiles too.
       def uploaded_data=(file_data)
         # see if we have NGINX string... see http://www.grid.net.ru/nginx/upload.en.html
-        if file_data.is_a?(String)
+        if file_data.is_a?(String) && attachment_options[:nginx_upload_secret]
           (s_secret, s_filename, s_content_type, s_orig_filename) = file_data.split(' ', 4);
-	  return nil if attachment_options[:nginx_upload_secret].nil? ||
-	  	        (s_secret != attachment_options[:nginx_upload_secret])
+          return nil if (s_secret != attachment_options[:nginx_upload_secret])
           return nil if  (s_orig_filename.nil? || s_filename.nil? || s_content_type.nil?)
           self.content_type = s_content_type
           self.filename = s_orig_filename if respond_to?(:filename)
           self.temp_path = s_filename
-          logger.debug("uploaded_data - temp path is #{self.temp_path} self is #{self.inspect}")
         else
           if file_data.respond_to?(:content_type)
             return nil if file_data.size == 0
