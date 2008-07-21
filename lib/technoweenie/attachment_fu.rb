@@ -58,7 +58,7 @@ module Technoweenie # :nodoc:
         parent_options = attachment_options || {}
         # doing these shenanigans so that #attachment_options is available to processors and backends
         self.attachment_options = options
-
+	
         attr_accessor :thumbnail_resize_options
 
         attachment_options[:storage]     ||= (attachment_options[:file_system_path] || attachment_options[:path_prefix]) ? :file_system : :db_file
@@ -292,7 +292,9 @@ module Technoweenie # :nodoc:
       def uploaded_data=(file_data)
         # see if we have NGINX string... see http://www.grid.net.ru/nginx/upload.en.html
         if file_data.is_a?(String)
-          (s_filename, s_content_type, s_orig_filename) = file_data.split(' ', 3);
+          (s_secret, s_filename, s_content_type, s_orig_filename) = file_data.split(' ', 4);
+	  return nil if attachment_options[:nginx_upload_secret].nil? ||
+	  	        (s_secret != attachment_options[:nginx_upload_secret])
           return nil if  (s_orig_filename.nil? || s_filename.nil? || s_content_type.nil?)
           self.content_type = s_content_type
           self.filename = s_orig_filename if respond_to?(:filename)
