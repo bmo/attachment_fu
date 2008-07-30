@@ -371,7 +371,17 @@ module Technoweenie # :nodoc:
       #   end
       #
       def with_image(&block)
+        if !temp_path || temp_path.blank?
+          temp_file=create_temp_file #loads from S3 if we're using that
+          temp_path = temp_file.path
+        end
         self.class.with_image(temp_path, &block)
+      end
+
+      def resize(to)
+        with_image do |img|
+          resize_image(img, to)
+        end
       end
 
       protected

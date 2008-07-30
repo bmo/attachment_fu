@@ -51,6 +51,9 @@ module Technoweenie # :nodoc:
               commands.resize(size.to_s)
             end
           end
+          self.width  = img[:width] if respond_to?(:width)
+          self.height = img[:height]  if respond_to?(:height)
+          self.size = File.size(img.path) if respond_to?(:size)
           self.temp_path = img
         end
       end
