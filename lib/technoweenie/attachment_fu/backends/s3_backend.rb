@@ -59,7 +59,9 @@ module Technoweenie # :nodoc:
       # * <tt>:server</tt> - The server to make requests to. Defaults to <tt>s3.amazonaws.com</tt>.
       # * <tt>:port</tt> - The port to the requests should be made on. Defaults to 80 or 443 if <tt>:use_ssl</tt> is set.
       # * <tt>:use_ssl</tt> - If set to true, <tt>:port</tt> will be implicitly set to 443, unless specified otherwise. Defaults to false.
-      #
+      # * <tt>:s3_after_deferred_save</tt> - If defined, will call back this method on the object if the object is set to NOT being saved (item.s3_defer_save was called)
+      #                                this is typically used if one is going to post a message to a queue to actually save a file to S3 after the item
+      #                                has been saved.
       # == Usage
       #
       # To specify S3 as the storage mechanism for a model, set the acts_as_attachment <tt>:storage</tt> option to <tt>:s3</tt>.
@@ -121,6 +123,9 @@ module Technoweenie # :nodoc:
         class RequiredLibraryNotFoundError < StandardError; end
         class ConfigFileNotFoundError < StandardError; end
 
+        STORED_ON_S3 = 2
+        STORED_ON_FS = 0
+
         def self.included(base) #:nodoc:
           mattr_reader :bucket_name, :s3_config
           
@@ -181,7 +186,8 @@ module Technoweenie # :nodoc:
 
         # The attachment ID used in the full path of a file
         def attachment_path_id
-          ((respond_to?(:parent_id) && parent_id) || id).to_s
+          #((respond_to?(:parent_id) && parent_id) || id).to_s # we're not using thumbnails
+          id.to_s
         end
 
         # The pseudo hierarchy containing the file relative to the bucket name
@@ -261,6 +267,18 @@ module Technoweenie # :nodoc:
           Technoweenie::AttachmentFu::Backends::S3Backend.port_string
         end
 
+        def s3_object
+          S3Object
+        end
+
+        def s3_defer_save
+          @defer_save = true
+        end
+
+        def is_on_s3?
+            STORED_ON_S3==self.storage_spec
+        end
+
         protected
           # Called in the after_destroy callback
           def destroy_file
@@ -283,17 +301,33 @@ module Technoweenie # :nodoc:
             true
           end
 
+          def is_on_s3!
+            ActiveRecord::Base.record_timestamps = false
+            update_attribute(:storage_spec, STORED_ON_S3) # do it this way to not trigger callbacks, nor change updated_at...
+            ActiveRecord::Base.record_timestamps = false
+          end
+
+
+
           def save_to_storage
             if save_attachment?
-              S3Object.store(
-                full_filename,
-                (temp_path ? File.open(temp_path) : temp_data),
-                bucket_name,
-                :content_type => content_type,
-                :access => attachment_options[:s3_access]
-              )
+              if !@defer_save
+                S3Object.store(
+                  full_filename,
+                    (temp_path ? File.open(temp_path) : temp_data),
+                    bucket_name,
+                    :content_type => content_type,
+                    :access => attachment_options[:s3_access]
+                )
+                if !is_on_s3?
+                  is_on_s3!
+                end
+              else
+                if attachment_options[:s3_after_deferred_save] && respond_to?(attachment_options[:s3_after_deferred_save])
+                  send(attachment_options[:s3_after_deferred_save])  # trigger a real save perhaps...
+                end
+              end
             end
-
             @old_filename = nil
             true
           end
